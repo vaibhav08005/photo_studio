@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Phone, MapPin, Mail, Instagram, Facebook } from 'lucide-react';
+import { Phone, MapPin, Mail, Instagram, Facebook, CheckCircle, AlertCircle } from 'lucide-react';
+import emailjs from '@emailjs/browser';
+import { EMAILJS_CONFIG, RECIPIENT_EMAIL } from '../emailjs.config';
 
 const Contact: React.FC = () => {
   const [formState, setFormState] = useState({
@@ -11,16 +13,59 @@ const Contact: React.FC = () => {
     message: ''
   });
   const [submitted, setSubmitted] = useState(false);
+  const [status, setStatus] = useState<{ type: 'success' | 'error' | null, message: string }>({ type: null, message: '' });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitted(true);
-    // Simulate API call
-    setTimeout(() => {
-      alert('Thanks for your inquiry! We will contact you shortly.');
+    setStatus({ type: null, message: '' });
+
+    try {
+      // EmailJS configuration
+      const serviceID = EMAILJS_CONFIG.serviceID;
+      const templateID = EMAILJS_CONFIG.templateID;
+      const publicKey = EMAILJS_CONFIG.publicKey;
+
+      // Prepare email parameters
+      const templateParams = {
+        to_email: RECIPIENT_EMAIL,
+        from_name: formState.name,
+        from_email: formState.email,
+        phone: formState.phone,
+        service: formState.service,
+        date: formState.date,
+        message: formState.message,
+        reply_to: formState.email
+      };
+
+      // Send email using EmailJS
+      const response = await emailjs.send(
+        serviceID,
+        templateID,
+        templateParams,
+        publicKey
+      );
+
+      if (response.status === 200) {
+        setStatus({ 
+          type: 'success', 
+          message: 'Thanks for your inquiry! We will contact you shortly.' 
+        });
+        setFormState({ name: '', email: '', phone: '', service: 'Wedding', date: '', message: '' });
+      }
+    } catch (error) {
+      console.error('Email send error:', error);
+      setStatus({ 
+        type: 'error', 
+        message: 'Failed to send inquiry. Please try again or contact us directly.' 
+      });
+    } finally {
       setSubmitted(false);
-      setFormState({ name: '', email: '', phone: '', service: 'Wedding', date: '', message: '' });
-    }, 1000);
+      // Clear status message after 5 seconds
+      setTimeout(() => {
+        setStatus({ type: null, message: '' });
+      }, 5000);
+    }
   };
 
   return (
@@ -65,7 +110,7 @@ const Contact: React.FC = () => {
               </div>
               <div>
                 <h4 className="text-white font-bold uppercase mb-1">Email</h4>
-                <p className="text-gray-400">book@nandedsnaps.com</p>
+                <p className="text-gray-400">vsontakke100@gmail.com</p>
               </div>
             </div>
           </div>
@@ -127,7 +172,8 @@ const Contact: React.FC = () => {
                   <option>Wedding Photography</option>
                   <option>Portrait Shoot</option>
                   <option>Event Coverage</option>
-                  <option>Product Shoot</option>
+                  <option>Birthday shoot</option>
+                  <option>Other</option>
                 </select>
               </div>
               <div className="space-y-2">
@@ -158,6 +204,22 @@ const Contact: React.FC = () => {
             >
               {submitted ? 'Sending...' : 'Send Inquiry'}
             </button>
+
+            {/* Status Message */}
+            {status.type && (
+              <div className={`flex items-center gap-3 p-4 rounded ${
+                status.type === 'success' 
+                  ? 'bg-green-500/10 border border-green-500/30 text-green-400' 
+                  : 'bg-red-500/10 border border-red-500/30 text-red-400'
+              }`}>
+                {status.type === 'success' ? (
+                  <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                )}
+                <p className="text-sm">{status.message}</p>
+              </div>
+            )}
           </form>
         </div>
       </div>
